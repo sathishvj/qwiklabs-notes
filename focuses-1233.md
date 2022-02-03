@@ -1,0 +1,77 @@
+Dynamic VPN Gateways - Cloud Routers
+====================================
+https://www.qwiklabs.com/focuses/1233
+
+gcloud compute networks create gcp-vpc --subnet-mode=custom
+
+gcloud compute networks subnets create subnet-a --region=us-east1 --range=10.5.4.0/24 --network=gcp-vpc
+
+
+gcloud compute networks create on-prem --subnet-mode=custom
+
+gcloud compute networks subnets create subnet-b --region=europe-west1 --range=10.1.3.0/24 --network=on-prem
+
+gcloud compute instances create gcp-server  --zone=us-east1-b --machine-type=f1-micro --network=gcp-vpc --subnet=subnet-a
+
+gcloud compute instances create on-prem-1  --zone=europe-west1-b --machine-type=f1-micro --subnet=subnet-b
+
+gcloud compute firewall-rules create allow-icmp-ssh-gcp-vpc --network=gcp-vpc --action=ALLOW --rules=tcp:22,icmp --source-ranges=0.0.0.0/0
+
+gcloud compute firewall-rules create allow-icmp-ssh-on-prem --network=on-prem --action=ALLOW --rules=tcp:22,icmp --source-ranges=0.0.0.0/0
+
+gcloud compute instances describe gcp-server --zone=us-east1-b
+
+gcloud compute ssh gcp-server --zone=us-east1-b
+
+# ping -c 3 <external ip of on-prem-1> machine
+# ping -c 3 <internal ip of on-prem-1> machine
+
+gcloud compute routers create gcp-vpc-cr --region=us-east1 --network=gcp-vpc --asn=65470
+
+
+gcloud compute routers create on-prem-cr --region=europe-west1 --network=on-prem --asn=65503
+
+gcloud compute addresses create gcp-vpc-ip  --region=us-east1
+// call this STATIC_IP_1, e.g. STATIC_IP_1=34.138.16.46
+
+gcloud compute addresses create on-prem-ip  --region=europe-west1
+// call this STATIC_IP_2, eg. STATIC_IP_2=34.76.61.116
+
+
+# first vpn : didn't work?
+gcloud compute target-vpn-gateways create vpn-2 --region=us-east1 --network=gcp-vpc && \ 
+gcloud compute forwarding-rules create vpn-1-rule-esp --region=us-east1 --address=$STATIC_IP_1 --ip-protocol=ESP --target-vpn-gateway=vpn-1 && \
+gcloud compute forwarding-rules create vpn-1-rule-udp500 --region=us-east1 --address=$STATIC_IP_1 --ip-protocol=UDP --ports=500 --target-vpn-gateway=vpn-1 && \
+gcloud compute forwarding-rules create vpn-1-rule-udp4500 --region=us-east1 --address=$STATIC_IP_1 --ip-protocol=UDP --ports=4500 --target-vpn-gateway=vpn-1 && \
+gcloud compute vpn-tunnels create vpn-1-tunnel-1 --region=us-east1 --peer-address=$STATIC_IP_2 --shared-secret=gcprocks --ike-version=2 --target-vpn-gateway=vpn-1 && \
+gcloud compute routers add-interface gcp-vpc-cr --interface-name=if-bgp1to2 --vpn-tunnel=vpn-1-tunnel-1
+
+gcloud compute routers add-bgp-peer gcp-vpc-cr --interface=if-bgp1to2 --peer-name=bgp1to2 --peer-asn=65503 --ip-address=169.254.0.1 --peer-ip-address=169.254.0.2 --advertisement-mode=DEFAULT
+
+// notes: there are a specific set of allowed ip addresses and peer addresses.
+// the ASNs are from an allowed list of private asns for google.
+
+# second vpn : didn't work?
+gcloud compute target-vpn-gateways create vpn-2 --region=europe-west1 --network=on-prem && \
+gcloud compute forwarding-rules create vpn-2-rule-esp --region=europe-west1 --address=$STATIC_IP_2 --ip-protocol=ESP --target-vpn-gateway=vpn-2 && \
+gcloud compute forwarding-rules create vpn-2-rule-udp500 --region=europe-west1 --address=$STATIC_IP_2 --ip-protocol=UDP --ports=500 --target-vpn-gateway=vpn-2 && \
+gcloud compute forwarding-rules create vpn-2-rule-udp4500 --region=europe-west1 --address=$STATIC_IP_2 --ip-protocol=UDP --ports=4500 --target-vpn-gateway=vpn-2 && \
+gcloud compute vpn-tunnels create vpn-2-tunnel-1 --region=europe-west1 --peer-address=$STATIC_IP_1 --shared-secret=gcprocks --ike-version=2 --target-vpn-gateway=vpn-2 && \
+gcloud compute routers add-interface on-prem-cr --interface-name=if-bgp2to1 --vpn-tunnel=vpn-2-tunnel-1
+
+gcloud compute routers add-bgp-peer on-prem-cr --interface=if-bgp2to1 --peer-name=bgp2to1 --peer-asn=65470 --ip-address=169.254.0.2 --peer-ip-address=169.254.0.1 --advertisement-mode=DEFAULT
+
+
+
+gcloud compute networks subnets create subnet-c --region=europe-west1 --range=10.4.2.0/24 --network=on-prem
+
+gcloud compute instances create on-prem-2  --zone=europe-west1-c --machine-type=f1-micro --subnet=subnet-c
+
+
+References: 
+* https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/asn-requirements
+* Establishing bgp connections - https://cloud.google.com/network-connectivity/docs/router/how-to/configuring-bgp
+* Creating Cloud Routers - https://cloud.google.com/network-connectivity/docs/router/how-to/creating-routers#create_a
+* Classic VPN Deprecation - https://cloud.google.com/network-connectivity/docs/vpn/deprecations/classic-vpn-deprecation
+Upgrade to Google’s HA VPN to get industry-leading availability for mission-critical workloads - https://www.youtube.com/watch?v=lIEExVWf5bg&t=14s
+* 
