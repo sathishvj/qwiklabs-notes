@@ -38,7 +38,7 @@ gcloud compute addresses create on-prem-ip  --region=europe-west1
 // call this STATIC_IP_2, eg. STATIC_IP_2=34.76.61.116
 
 
-# first vpn : didn't work?
+# first vpn : this didn't work for me.  Do this and the bgp section manually for now.
 gcloud compute target-vpn-gateways create vpn-2 --region=us-east1 --network=gcp-vpc && \ 
 gcloud compute forwarding-rules create vpn-1-rule-esp --region=us-east1 --address=$STATIC_IP_1 --ip-protocol=ESP --target-vpn-gateway=vpn-1 && \
 gcloud compute forwarding-rules create vpn-1-rule-udp500 --region=us-east1 --address=$STATIC_IP_1 --ip-protocol=UDP --ports=500 --target-vpn-gateway=vpn-1 && \
@@ -51,7 +51,7 @@ gcloud compute routers add-bgp-peer gcp-vpc-cr --interface=if-bgp1to2 --peer-nam
 // notes: there are a specific set of allowed ip addresses and peer addresses.
 // the ASNs are from an allowed list of private asns for google.
 
-# second vpn : didn't work?
+# second vpn : this didn't work for me.  Do this and the bgp section manually for now.
 gcloud compute target-vpn-gateways create vpn-2 --region=europe-west1 --network=on-prem && \
 gcloud compute forwarding-rules create vpn-2-rule-esp --region=europe-west1 --address=$STATIC_IP_2 --ip-protocol=ESP --target-vpn-gateway=vpn-2 && \
 gcloud compute forwarding-rules create vpn-2-rule-udp500 --region=europe-west1 --address=$STATIC_IP_2 --ip-protocol=UDP --ports=500 --target-vpn-gateway=vpn-2 && \
@@ -69,9 +69,8 @@ gcloud compute instances create on-prem-2  --zone=europe-west1-c --machine-type=
 
 
 References: 
-* https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/asn-requirements
+* Network Connectivity Center ASN requirements - https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/asn-requirements
 * Establishing bgp connections - https://cloud.google.com/network-connectivity/docs/router/how-to/configuring-bgp
 * Creating Cloud Routers - https://cloud.google.com/network-connectivity/docs/router/how-to/creating-routers#create_a
 * Classic VPN Deprecation - https://cloud.google.com/network-connectivity/docs/vpn/deprecations/classic-vpn-deprecation
-Upgrade to Google’s HA VPN to get industry-leading availability for mission-critical workloads - https://www.youtube.com/watch?v=lIEExVWf5bg&t=14s
-* 
+* Upgrade to Google’s HA VPN to get industry-leading availability for mission-critical workloads - https://www.youtube.com/watch?v=lIEExVWf5bg&t=14s
