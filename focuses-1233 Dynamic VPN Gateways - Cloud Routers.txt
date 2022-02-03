@@ -75,3 +75,4 @@ References:
 * Classic VPN Deprecation - https://cloud.google.com/network-connectivity/docs/vpn/deprecations/classic-vpn-deprecation
 * Upgrade to Google’s HA VPN to get industry-leading availability for mission-critical workloads - https://www.youtube.com/watch?v=lIEExVWf5bg&t=14s
 * What is an Autonomous System Number (ASN)? - https://blog.stackpath.com/autonomous-system-number/
+* VPNs Explained: Site to Site and Remote Access - https://www.youtube.com/watch?v=CWy3x3Wux6o
